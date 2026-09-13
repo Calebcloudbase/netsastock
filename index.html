@@ -38,8 +38,130 @@
         .tab-btn.active { background-color: #6366F1; color: #ffffff; }
         .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
     </style>
+
+    <!-- ============================================================ -->
+    <!-- FIREBASE SETUP (Firestore = storage, Auth = login/security)  -->
+    <!-- ============================================================ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import {
+            getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+            onSnapshot, query, orderBy
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import {
+            getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyABPTqss3yx7Ktq88P4EHS57C_DuYGWxbY",
+            authDomain: "netsastock-e285b.firebaseapp.com",
+            projectId: "netsastock-e285b",
+            storageBucket: "netsastock-e285b.firebasestorage.app",
+            messagingSenderId: "15480432977",
+            appId: "1:15480432977:web:0a8a22d2ba8816b4c10b70",
+            measurementId: "G-SJXPT9K9XX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const inventoryCol = collection(db, "inventory");
+        const salesCol = collection(db, "sales");
+
+        // Expose everything the vanilla script below needs
+        window.db = db;
+        window.auth = auth;
+        window.fb = {
+            collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
+            query, orderBy, inventoryCol, salesCol,
+            signInWithEmailAndPassword, signOut
+        };
+
+        // Watch login state. When logged in -> show app & start listening to data.
+        // When logged out -> show login screen & stop listening.
+        let unsubscribeInventory = null;
+        let unsubscribeSales = null;
+
+        onAuthStateChanged(auth, (user) => {
+            const loginScreen = document.getElementById('login-screen');
+            const appRoot = document.getElementById('app-root');
+            if (!loginScreen || !appRoot) return; // DOM not ready yet
+
+            if (user) {
+                loginScreen.classList.add('hidden');
+                appRoot.classList.remove('hidden');
+                document.getElementById('logged-in-email').innerText = user.email;
+
+                if (unsubscribeInventory) unsubscribeInventory();
+                unsubscribeInventory = onSnapshot(inventoryCol, (snapshot) => {
+                    window.localInventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    if (window.refreshAppViews) window.refreshAppViews();
+                });
+
+                if (unsubscribeSales) unsubscribeSales();
+                const salesQuery = query(salesCol, orderBy('timestamp', 'desc'));
+                unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
+                    window.allSales = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    if (window.refreshAppViews) window.refreshAppViews();
+                });
+            } else {
+                loginScreen.classList.remove('hidden');
+                appRoot.classList.add('hidden');
+                if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }
+                if (unsubscribeSales) { unsubscribeSales(); unsubscribeSales = null; }
+            }
+        });
+
+        window.handleLogin = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errEl = document.getElementById('login-error');
+            errEl.classList.add('hidden');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (err) {
+                errEl.innerText = "Login failed: " + err.message;
+                errEl.classList.remove('hidden');
+            }
+        };
+
+        window.handleLogout = async function() {
+            await signOut(auth);
+        };
+    </script>
 </head>
 <body class="flex flex-col min-h-screen">
+
+    <!-- ============================================================ -->
+    <!-- LOGIN SCREEN (shown when nobody is logged in)                -->
+    <!-- ============================================================ -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="bg-brand-card border border-brand-border rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="mx-auto flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 font-black text-2xl text-white shadow-lg">N</div>
+                <h1 class="text-xl font-black text-white">NetsaStock Login</h1>
+                <p class="text-xs text-slate-400">Sign in to access your inventory</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Email</label>
+                    <input type="email" id="login-email" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Password</label>
+                    <input type="password" id="login-password" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                </div>
+                <p id="login-error" class="text-xs text-red-400 hidden"></p>
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-purple to-brand-pink font-bold text-white shadow-lg hover:opacity-95 transition">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MAIN APP (hidden until logged in)                            -->
+    <!-- ============================================================ -->
+    <div id="app-root" class="hidden flex flex-col min-h-screen">
 
     <!-- NAVIGATION HEADER -->
     <header class="border-b border-brand-border bg-brand-dark/80 backdrop-blur-md sticky top-0 z-50">
@@ -67,6 +189,10 @@
                 <button onclick="switchView('critical-page')" class="px-4 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-danger text-sm font-semibold transition">⚠️ Critical</button>
                 <button onclick="switchView('add-item-page')" class="px-4 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-accent text-sm font-semibold transition">➕ Add Item</button>
                 <button onclick="switchView('sales-page')" class="px-4 py-2 rounded-lg bg-brand-accent hover:bg-indigo-600 text-sm font-semibold text-white shadow-lg transition">📊 Analytics</button>
+                <div class="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-brand-border">
+                    <span id="logged-in-email" class="text-xs text-slate-400"></span>
+                    <button onclick="handleLogout()" class="px-3 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-danger text-xs font-semibold text-red-400 transition">Log Out</button>
+                </div>
             </div>
         </div>
     </header>
@@ -155,7 +281,7 @@
         <!-- ADD ITEM -->
         <section id="add-item-page" class="hidden max-w-2xl mx-auto bg-brand-card border border-brand-border rounded-3xl p-8 shadow-2xl">
             <h2 class="text-2xl font-extrabold text-white mb-2">➕ Add New Spare Part</h2>
-            <p class="text-slate-400 text-sm mb-6">Enter details below to add a part to your local inventory.</p>
+            <p class="text-slate-400 text-sm mb-6">Enter details below to add a part to your inventory.</p>
             <form id="add-item-form" onsubmit="handleAddItem(event)" class="space-y-5">
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase mb-2">🏷️ Name / Model</label>
@@ -398,27 +524,23 @@
     <!-- TOAST NOTIFICATION -->
     <div id="toast" class="hidden fixed bottom-6 right-6 bg-emerald-600 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-2xl z-[60] transition-opacity"></div>
 
+    </div> <!-- end #app-root -->
+
     <script>
-        // VANILLA STATE STORE
-        let localInventory = [
-            { id: "1", name: "Brake Pad Set", type: "TVS King", location: "Rack A-1", buyingPrice: 450, sellingPrice: 650, quantity: 8, totalSold: 12 },
-            { id: "2", name: "Piston Ring Kit", type: "Hora RE", location: "Shelf B-2", buyingPrice: 1200, sellingPrice: 1650, quantity: 2, totalSold: 5 },
-            { id: "3", name: "Clutch Cable", type: "BOXER", location: "Bin C-4", buyingPrice: 180, sellingPrice: 280, quantity: 1, totalSold: 19 }
-        ];
+        // ============================================================
+        // APP STATE
+        // ============================================================
+        // localInventory is now populated live from Firestore (see the
+        // Firebase <script type="module"> block in <head>, which sets
+        // window.localInventory and calls window.refreshAppViews()).
+        window.localInventory = window.localInventory || [];
+        Object.defineProperty(window, '_localInventoryProxy', { value: true }); // no-op marker
 
         function getTodayKey() { return new Date().toISOString().slice(0, 10); }
 
-        let todayTxns = [
-            { id: "tx_101", itemId: "3", itemName: "Clutch Cable", itemType: "BOXER", quantity: 2, buyingPrice: 180, sellingPrice: 280, profit: 200, revenue: 560 }
-        ];
-
-        let dailySummaries = [
-            { date: getTodayKey(), revenue: 560, profit: 200 }
-        ];
-
-        let monthlySummaries = [
-            { month: getTodayKey().substring(0, 7), revenue: 560, profit: 200 }
-        ];
+        // Sales history now lives in Firestore (collection "sales") and is kept
+        // live in window.allSales by the listener in the <head> Firebase block.
+        window.allSales = window.allSales || [];
 
         let activeCategory = 'ALL';
         let salesHorizon = 'today';
@@ -435,13 +557,17 @@
             setTimeout(() => toast.classList.add('hidden'), 2100);
         }
 
-        function refreshAppViews() {
+        window.refreshAppViews = function() {
             renderInventory();
             renderCritical();
             renderDashboardCapital();
             renderTopSold();
             renderSalesAnalytics();
-        }
+        };
+
+        // A getter so the rest of the code can keep saying "localInventory"
+        // while it actually always reads the live Firestore-backed array.
+        function localInv() { return window.localInventory; }
 
         // VIEW ROUTING
         window.switchView = function(viewId) {
@@ -464,7 +590,7 @@
         // CAPITAL CALCULATIONS
         function renderDashboardCapital() {
             let tvs = 0, hora = 0, boxer = 0;
-            localInventory.forEach(item => {
+            localInv().forEach(item => {
                 const totalCost = (Number(item.quantity) || 0) * (Number(item.buyingPrice) || 0);
                 if (item.type === 'TVS King') tvs += totalCost;
                 else if (item.type === 'Hora RE') hora += totalCost;
@@ -480,8 +606,8 @@
         function renderTopSold() {
             const listEl = document.getElementById('top-sold-list');
             const toggleBtn = document.getElementById('trending-toggle-btn');
-            
-            const sorted = [...localInventory].sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0));
+
+            const sorted = [...localInv()].sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0));
             const hasSales = sorted.some(i => (i.totalSold || 0) > 0);
 
             if (!hasSales || sorted.length === 0) {
@@ -527,7 +653,7 @@
             renderTopSold();
         };
 
-        // INVENTORY CARD GRID (MATCHING CRITICAL LOOK)
+        // INVENTORY CARD GRID
         window.filterCategory = function(cat) {
             activeCategory = cat;
             ['ALL', 'BABAJ', 'TVS King', 'Hora RE', 'BOXER'].forEach(c => {
@@ -543,18 +669,17 @@
             const container = document.getElementById('inventory-container');
             const search = document.getElementById('search-input').value.toLowerCase().trim();
 
-            let filtered = localInventory.filter(i => {
+            let filtered = localInv().filter(i => {
                 const matchesCat = activeCategory === 'ALL' ? true :
                                    activeCategory === 'BABAJ' ? (i.type === 'TVS King' || i.type === 'Hora RE') :
                                    i.type === activeCategory;
-                const matchesSearch = !search || 
-                                     i.name.toLowerCase().includes(search) || 
-                                     i.type.toLowerCase().includes(search) || 
+                const matchesSearch = !search ||
+                                     i.name.toLowerCase().includes(search) ||
+                                     i.type.toLowerCase().includes(search) ||
                                      i.location.toLowerCase().includes(search);
                 return matchesCat && matchesSearch;
             });
 
-            // Alphabetical Sort (A-Z)
             filtered.sort((a, b) => a.name.localeCompare(b.name));
 
             if (filtered.length === 0) {
@@ -620,7 +745,7 @@
 
         function renderCritical() {
             const container = document.getElementById('critical-container');
-            let sorted = [...localInventory].sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0));
+            let sorted = [...localInv()].sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0));
 
             if (sorted.length === 0) {
                 container.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 font-semibold">No critical stock items.</div>';
@@ -659,11 +784,12 @@
             container.innerHTML = html;
         }
 
-        // ADD ITEM HANDLER
-        window.handleAddItem = function(e) {
+        // ============================================================
+        // ADD ITEM -> writes to Firestore
+        // ============================================================
+        window.handleAddItem = async function(e) {
             e.preventDefault();
             const newItem = {
-                id: Date.now().toString(),
                 name: document.getElementById('item-name').value.trim(),
                 type: document.getElementById('item-type').value,
                 location: document.getElementById('item-location').value.trim(),
@@ -672,27 +798,33 @@
                 quantity: parseInt(document.getElementById('item-quantity').value) || 0,
                 totalSold: 0
             };
-
-            localInventory.push(newItem);
-            document.getElementById('add-item-form').reset();
-            showToast("Item saved to inventory!");
-            refreshAppViews();
-            switchView('inventory-page');
-        };
-
-        // QUICK RESTOCK
-        window.quickRestock = function(id) {
-            const item = localInventory.find(i => i.id === id);
-            if (item) {
-                item.quantity += 1;
-                showToast("Stock updated (+1)");
-                refreshAppViews();
+            try {
+                await window.fb.addDoc(window.fb.inventoryCol, newItem);
+                document.getElementById('add-item-form').reset();
+                showToast("Item saved to inventory!");
+                switchView('inventory-page');
+            } catch (err) {
+                showToast("Failed to save: " + err.message);
             }
         };
 
-        // EDIT ITEM MODAL HANDLERS
+        // QUICK RESTOCK -> updates Firestore
+        window.quickRestock = async function(id) {
+            const item = localInv().find(i => i.id === id);
+            if (!item) return;
+            try {
+                await window.fb.updateDoc(window.fb.doc(window.db, "inventory", id), {
+                    quantity: (Number(item.quantity) || 0) + 1
+                });
+                showToast("Stock updated (+1)");
+            } catch (err) {
+                showToast("Failed to restock: " + err.message);
+            }
+        };
+
+        // EDIT ITEM MODAL
         window.openEditModal = function(id) {
-            const item = localInventory.find(i => i.id === id);
+            const item = localInv().find(i => i.id === id);
             if (!item) return;
             document.getElementById('edit-id').value = item.id;
             document.getElementById('edit-name').value = item.name;
@@ -710,35 +842,39 @@
             document.getElementById('edit-modal').classList.remove('flex');
         };
 
-        window.handleSaveEdit = function(e) {
+        window.handleSaveEdit = async function(e) {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
-            const item = localInventory.find(i => i.id === id);
-            if (item) {
-                item.name = document.getElementById('edit-name').value.trim();
-                item.type = document.getElementById('edit-type').value;
-                item.location = document.getElementById('edit-location').value.trim();
-                item.buyingPrice = parseFloat(document.getElementById('edit-buying').value) || 0;
-                item.sellingPrice = parseFloat(document.getElementById('edit-selling').value) || 0;
-                item.quantity = parseInt(document.getElementById('edit-quantity').value) || 0;
-
+            const updated = {
+                name: document.getElementById('edit-name').value.trim(),
+                type: document.getElementById('edit-type').value,
+                location: document.getElementById('edit-location').value.trim(),
+                buyingPrice: parseFloat(document.getElementById('edit-buying').value) || 0,
+                sellingPrice: parseFloat(document.getElementById('edit-selling').value) || 0,
+                quantity: parseInt(document.getElementById('edit-quantity').value) || 0
+            };
+            try {
+                await window.fb.updateDoc(window.fb.doc(window.db, "inventory", id), updated);
                 closeEditModal();
                 showToast("Item details updated!");
-                refreshAppViews();
+            } catch (err) {
+                showToast("Failed to update: " + err.message);
             }
         };
 
-        window.handleDeleteItem = function(id) {
-            if (confirm("Are you sure you want to delete this spare part?")) {
-                localInventory = localInventory.filter(i => i.id !== id);
+        window.handleDeleteItem = async function(id) {
+            if (!confirm("Are you sure you want to delete this spare part?")) return;
+            try {
+                await window.fb.deleteDoc(window.fb.doc(window.db, "inventory", id));
                 showToast("Item deleted.");
-                refreshAppViews();
+            } catch (err) {
+                showToast("Failed to delete: " + err.message);
             }
         };
 
-        // SELL MODAL HANDLERS
+        // SELL MODAL
         window.openSellModal = function(id) {
-            const item = localInventory.find(i => i.id === id);
+            const item = localInv().find(i => i.id === id);
             if (!item) return;
             document.getElementById('sell-item-id').value = item.id;
             document.getElementById('sell-modal-title').innerText = `🛒 Sell ${item.name}`;
@@ -756,10 +892,10 @@
             document.getElementById('sell-modal').classList.remove('flex');
         };
 
-        window.handleConfirmSell = function(e) {
+        window.handleConfirmSell = async function(e) {
             e.preventDefault();
             const id = document.getElementById('sell-item-id').value;
-            const item = localInventory.find(i => i.id === id);
+            const item = localInv().find(i => i.id === id);
             const qtySold = parseInt(document.getElementById('sell-qty').value) || 0;
             const actualPrice = parseFloat(document.getElementById('sell-price').value) || 0;
             const errEl = document.getElementById('sell-error');
@@ -774,52 +910,41 @@
             const profitPerUnit = actualPrice - Number(item.buyingPrice || 0);
             const totalProfit = profitPerUnit * qtySold;
             const totalRevenue = actualPrice * qtySold;
-
-            // Update Stock
-            item.quantity -= qtySold;
-            item.totalSold = (item.totalSold || 0) + qtySold;
-
-            // Log Transaction
-            todayTxns.unshift({
-                id: 'tx_' + Date.now(),
-                itemId: id,
-                itemName: item.name,
-                itemType: item.type,
-                quantity: qtySold,
-                buyingPrice: item.buyingPrice,
-                sellingPrice: actualPrice,
-                profit: totalProfit,
-                revenue: totalRevenue
-            });
-
-            // Update Ledger Summaries
             const today = getTodayKey();
-            let dSum = dailySummaries.find(d => d.date === today);
-            if (dSum) {
-                dSum.revenue += totalRevenue;
-                dSum.profit += totalProfit;
-            } else {
-                dailySummaries.unshift({ date: today, revenue: totalRevenue, profit: totalProfit });
-            }
-
             const monthKey = today.substring(0, 7);
-            let mSum = monthlySummaries.find(m => m.month === monthKey);
-            if (mSum) {
-                mSum.revenue += totalRevenue;
-                mSum.profit += totalProfit;
-            } else {
-                monthlySummaries.unshift({ month: monthKey, revenue: totalRevenue, profit: totalProfit });
+
+            try {
+                await window.fb.updateDoc(window.fb.doc(window.db, "inventory", id), {
+                    quantity: (Number(item.quantity) || 0) - qtySold,
+                    totalSold: (Number(item.totalSold) || 0) + qtySold
+                });
+                // Permanent sale record in Firestore — survives refresh
+                await window.fb.addDoc(window.fb.salesCol, {
+                    itemId: id,
+                    itemName: item.name,
+                    itemType: item.type,
+                    quantity: qtySold,
+                    buyingPrice: item.buyingPrice,
+                    sellingPrice: actualPrice,
+                    profit: totalProfit,
+                    revenue: totalRevenue,
+                    dateKey: today,
+                    monthKey: monthKey,
+                    timestamp: Date.now()
+                });
+            } catch (err) {
+                showToast("Failed to record sale: " + err.message);
+                return;
             }
 
             document.getElementById('sell-form').reset();
             closeSellModal();
             showToast("Sale logged successfully!");
-            refreshAppViews();
         };
 
-        // RETURN MODAL HANDLERS
+        // RETURN MODAL
         window.openReturnModal = function(txnId) {
-            const txn = todayTxns.find(t => t.id === txnId);
+            const txn = window.allSales.find(t => t.id === txnId);
             if (!txn) return;
             document.getElementById('return-txn-id').value = txn.id;
             document.getElementById('return-modal-title').innerText = `↩️ Return ${txn.itemName}`;
@@ -836,13 +961,12 @@
             document.getElementById('return-modal').classList.remove('flex');
         };
 
-        window.handleConfirmReturn = function(e) {
+        window.handleConfirmReturn = async function(e) {
             e.preventDefault();
             const txnId = document.getElementById('return-txn-id').value;
-            const txnIdx = todayTxns.findIndex(t => t.id === txnId);
-            if (txnIdx === -1) return;
-            
-            const txn = todayTxns[txnIdx];
+            const txn = window.allSales.find(t => t.id === txnId);
+            if (!txn) return;
+
             const returnQty = parseInt(document.getElementById('return-qty').value) || 0;
             const errEl = document.getElementById('return-error');
 
@@ -858,42 +982,35 @@
             const returnedProfit = unitProfit * returnQty;
             const returnedRevenue = unitRevenue * returnQty;
 
-            // Restore Stock
-            if (txn.itemId) {
-                const item = localInventory.find(i => i.id === txn.itemId);
-                if (item) {
-                    item.quantity += returnQty;
-                    item.totalSold = Math.max(0, (item.totalSold || 0) - returnQty);
+            try {
+                // Restore stock on the inventory item
+                if (txn.itemId) {
+                    const item = localInv().find(i => i.id === txn.itemId);
+                    if (item) {
+                        await window.fb.updateDoc(window.fb.doc(window.db, "inventory", txn.itemId), {
+                            quantity: (Number(item.quantity) || 0) + returnQty,
+                            totalSold: Math.max(0, (Number(item.totalSold) || 0) - returnQty)
+                        });
+                    }
                 }
-            }
 
-            // Deduct from Daily and Monthly Totals
-            const today = getTodayKey();
-            let dSum = dailySummaries.find(d => d.date === today);
-            if (dSum) {
-                dSum.revenue -= returnedRevenue;
-                dSum.profit -= returnedProfit;
-            }
-
-            const monthKey = today.substring(0, 7);
-            let mSum = monthlySummaries.find(m => m.month === monthKey);
-            if (mSum) {
-                mSum.revenue -= returnedRevenue;
-                mSum.profit -= returnedProfit;
-            }
-
-            // Adjust or remove transaction
-            if (returnQty === txn.quantity) {
-                todayTxns.splice(txnIdx, 1);
-            } else {
-                txn.quantity -= returnQty;
-                txn.revenue -= returnedRevenue;
-                txn.profit -= returnedProfit;
+                // Adjust or remove the permanent sale record
+                if (returnQty === txn.quantity) {
+                    await window.fb.deleteDoc(window.fb.doc(window.db, "sales", txn.id));
+                } else {
+                    await window.fb.updateDoc(window.fb.doc(window.db, "sales", txn.id), {
+                        quantity: txn.quantity - returnQty,
+                        revenue: txn.revenue - returnedRevenue,
+                        profit: txn.profit - returnedProfit
+                    });
+                }
+            } catch (err) {
+                showToast("Failed to process return: " + err.message);
+                return;
             }
 
             closeReturnModal();
             showToast("Return processed successfully!");
-            refreshAppViews();
         };
 
         // SALES ANALYTICS HORIZONS
@@ -912,6 +1029,30 @@
             const bodyEl = document.getElementById('sales-table-body');
             const revEl = document.getElementById('sales-total-revenue');
             const profEl = document.getElementById('sales-total-profit');
+
+            const allSales = window.allSales || [];
+            const today = getTodayKey();
+
+            // Today's individual transactions
+            const todayTxns = allSales.filter(s => s.dateKey === today);
+
+            // Group into daily summaries (most recent date first)
+            const dailyMap = {};
+            allSales.forEach(s => {
+                if (!dailyMap[s.dateKey]) dailyMap[s.dateKey] = { date: s.dateKey, revenue: 0, profit: 0 };
+                dailyMap[s.dateKey].revenue += Number(s.revenue) || 0;
+                dailyMap[s.dateKey].profit += Number(s.profit) || 0;
+            });
+            const dailySummaries = Object.values(dailyMap).sort((a, b) => b.date.localeCompare(a.date));
+
+            // Group into monthly summaries (most recent month first)
+            const monthlyMap = {};
+            allSales.forEach(s => {
+                if (!monthlyMap[s.monthKey]) monthlyMap[s.monthKey] = { month: s.monthKey, revenue: 0, profit: 0 };
+                monthlyMap[s.monthKey].revenue += Number(s.revenue) || 0;
+                monthlyMap[s.monthKey].profit += Number(s.profit) || 0;
+            });
+            const monthlySummaries = Object.values(monthlyMap).sort((a, b) => b.month.localeCompare(a.month));
 
             if (salesHorizon === 'today') {
                 headEl.innerHTML = `
@@ -993,36 +1134,11 @@
             }
         }
 
-        // INITIAL LOAD
+        // Initial paint (login screen shows first; refreshAppViews runs again
+        // automatically once Firebase confirms login and loads inventory data)
         window.addEventListener('DOMContentLoaded', () => {
-            refreshAppViews();
+            window.refreshAppViews();
         });
     </script>
-    <!-- Firebase Connection Script -->
-  <script type="module">
-    // 1. Imports Firebase engine
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    // 2. Your project details
-    const firebaseConfig = {
-      apiKey: "AIzaSyABPTqss3yx7Ktq88P4EHS57C_DuYGWxbY",
-      authDomain: "netsastock-e285b.firebaseapp.com",
-      projectId: "netsastock-e285b",
-      storageBucket: "netsastock-e285b.firebasestorage.app",
-      messagingSenderId: "15480432977",
-      appId: "1:15480432977:web:0a8a22d2ba8816b4c10b70",
-      measurementId: "G-SJXPT9K9XX"
-    };
-
-    // 3. Connects app to Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Make db available globally for testing
-    window.db = db;
-    console.log("NetsaStock connected to Firebase successfully!", db);
-  </script>
-</body>
 </body>
 </html>
