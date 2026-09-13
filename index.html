@@ -998,5 +998,31 @@
             refreshAppViews();
         });
     </script>
+    <!-- Firebase Connection Script -->
+  <script type="module">
+    // 1. Imports Firebase engine
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 2. Your project details
+    const firebaseConfig = {
+      apiKey: "AIzaSyABPTqss3yx7Ktq88P4EHS57C_DuYGWxbY",
+      authDomain: "netsastock-e285b.firebaseapp.com",
+      projectId: "netsastock-e285b",
+      storageBucket: "netsastock-e285b.firebasestorage.app",
+      messagingSenderId: "15480432977",
+      appId: "1:15480432977:web:0a8a22d2ba8816b4c10b70",
+      measurementId: "G-SJXPT9K9XX"
+    };
+
+    // 3. Connects app to Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Make db available globally for testing
+    window.db = db;
+    console.log("NetsaStock connected to Firebase successfully!", db);
+  </script>
+</body>
 </body>
 </html>
