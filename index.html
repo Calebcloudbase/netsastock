@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetsaStock - Inventory & Sales Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0B0F19',
+                            card: '#151C2C',
+                            border: '#232D42',
+                            accent: '#6366F1',
+                            purple: '#8B5CF6',
+                            pink: '#EC4899',
+                            danger: '#EF4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a, #0b0f19);
+            color: #f8fafc;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .fluid-bg {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+            backdrop-filter: blur(12px);
+        }
+        .tab-btn.active { background-color: #6366F1; color: #ffffff; }
+        .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- NAVIGATION HEADER -->
+    <header class="border-b border-brand-border bg-brand-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('welcome-page')">
+                <div class="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 font-black text-xl text-white shadow-lg shadow-purple-900/40 ring-2 ring-white/10">
+                    <span>N</span>
+                    <span class="absolute -bottom-1 -right-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                    </span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">Netsa<span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">Stock</span></span>
+                    <span class="text-[9px] uppercase tracking-widest text-purple-400 font-semibold -mt-1">Parts & Inventory</span>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+                <button onclick="switchView('info-page'); setInfoTab('about')" class="hover:text-pink-400 transition">About</button>
+                <button onclick="switchView('info-page'); setInfoTab('howitworks')" class="hover:text-pink-400 transition">How It Works</button>
+                <button onclick="switchView('info-page'); setInfoTab('contact')" class="hover:text-pink-400 transition">Contact Us</button>
+            </nav>
+            <div class="flex items-center gap-3">
+                <button onclick="switchView('inventory-page')" class="px-4 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-accent text-sm font-semibold transition">📦 Stock</button>
+                <button onclick="switchView('critical-page')" class="px-4 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-danger text-sm font-semibold transition">⚠️ Critical</button>
+                <button onclick="switchView('add-item-page')" class="px-4 py-2 rounded-lg bg-brand-card border border-brand-border hover:border-brand-accent text-sm font-semibold transition">➕ Add Item</button>
+                <button onclick="switchView('sales-page')" class="px-4 py-2 rounded-lg bg-brand-accent hover:bg-indigo-600 text-sm font-semibold text-white shadow-lg transition">📊 Analytics</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+
+        <!-- DASHBOARD -->
+        <section id="welcome-page" class="space-y-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="inline-block px-4 py-1.5 rounded-full bg-purple-900/40 border border-purple-500/30 text-purple-300 text-xs font-semibold uppercase tracking-wider">
+                        Next-Gen Vehicle Parts Inventory
+                    </div>
+                    <h1 class="text-5xl font-black tracking-tight text-white sm:text-6xl leading-tight">
+                        Welcome to <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">NetsaStock</span>
+                    </h1>
+                    <p class="text-lg text-slate-300 max-w-2xl leading-relaxed">
+                        Precision tracking for TVS King, Hora RE, and Boxer spare parts. Monitor live stock levels, compute total locked capital, and trace real-time daily profit metrics effortlessly.
+                    </p>
+                    <div class="flex items-center gap-4 pt-2">
+                        <button onclick="switchView('inventory-page')" class="px-8 py-4 rounded-xl bg-gradient-to-r from-brand-purple to-brand-pink font-bold text-white shadow-xl shadow-purple-900/30 hover:opacity-95 transition transform hover:-translate-y-0.5">Start Now</button>
+                        <button onclick="switchView('add-item-page')" class="px-8 py-4 rounded-xl bg-brand-card border border-brand-border font-semibold text-slate-200 hover:bg-slate-800 transition">Add New Parts</button>
+                    </div>
+                </div>
+                <div class="lg:col-span-5">
+                    <div class="fluid-bg rounded-3xl p-6 shadow-2xl relative overflow-hidden border border-white/10">
+                        <div class="flex items-center justify-between mb-5 pb-3 border-b border-white/10">
+                            <div class="flex items-center gap-2">
+                                <span class="p-2 rounded-xl bg-pink-500/20 text-pink-400 text-sm font-bold">🔥</span>
+                                <div>
+                                    <h2 class="text-base font-bold text-white leading-none">Top Trending Items</h2>
+                                    <span class="text-[10px] text-slate-400">Most requested parts in stock</span>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[10px] font-extrabold uppercase tracking-wider">Live Activity</span>
+                        </div>
+                        <div id="top-sold-list" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
+                        <button id="trending-toggle-btn" onclick="toggleTrendingExpanded()" class="hidden w-full mt-4 py-2.5 rounded-xl bg-brand-dark/80 border border-brand-border text-xs font-bold text-pink-400 hover:bg-slate-800 hover:text-pink-300 transition-all text-center"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-brand-border">
+                <h3 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2"><span>💵</span> Financial Capital Summary (Quantity × Buying Price)</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-brand-card/90 border border-brand-border rounded-2xl p-5 shadow-lg">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">TVS King Capital</p>
+                        <p id="cap-tvs" class="text-2xl font-black text-purple-400 mt-2">0.00 ETB</p>
+                    </div>
+                    <div class="bg-brand-card/90 border border-brand-border rounded-2xl p-5 shadow-lg">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Hora RE Capital</p>
+                        <p id="cap-hora" class="text-2xl font-black text-pink-400 mt-2">0.00 ETB</p>
+                    </div>
+                    <div class="bg-brand-card/90 border border-brand-border rounded-2xl p-5 shadow-lg">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Boxer Capital</p>
+                        <p id="cap-boxer" class="text-2xl font-black text-indigo-400 mt-2">0.00 ETB</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 rounded-2xl p-5 shadow-lg">
+                        <p class="text-xs font-semibold text-indigo-300 uppercase">💰 Grand Total Capital</p>
+                        <p id="cap-total" class="text-2xl font-black text-emerald-400 mt-2">0.00 ETB</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STOCK / INVENTORY -->
+        <section id="inventory-page" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border pb-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-white">Stock & Inventory Catalog</h2>
+                    <p class="text-slate-400 text-sm mt-1">Sorted alphabetically (A-Z) with card layouts matching critical stock view.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 bg-brand-card p-1.5 rounded-xl border border-brand-border">
+                    <button onclick="filterCategory('ALL')" id="tab-ALL" class="tab-btn active px-4 py-2 rounded-lg text-xs font-bold transition">All Inventory</button>
+                    <button onclick="filterCategory('BABAJ')" id="tab-BABAJ" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition">BABAJ (All)</button>
+                    <button onclick="filterCategory('TVS King')" id="tab-TVS King" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition">🛺 TVS King</button>
+                    <button onclick="filterCategory('Hora RE')" id="tab-Hora RE" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition">🛺 Hora RE</button>
+                    <button onclick="filterCategory('BOXER')" id="tab-BOXER" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition">🏍️ BOXER</button>
+                </div>
+            </div>
+            <input type="text" id="search-input" oninput="renderInventory()" placeholder="🔍 Live search parts by name, model, or bin location..." class="w-full bg-brand-card border border-brand-border rounded-xl px-5 py-3 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-accent transition">
+            
+            <div id="inventory-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+
+        <!-- ADD ITEM -->
+        <section id="add-item-page" class="hidden max-w-2xl mx-auto bg-brand-card border border-brand-border rounded-3xl p-8 shadow-2xl">
+            <h2 class="text-2xl font-extrabold text-white mb-2">➕ Add New Spare Part</h2>
+            <p class="text-slate-400 text-sm mb-6">Enter details below to add a part to your local inventory.</p>
+            <form id="add-item-form" onsubmit="handleAddItem(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">🏷️ Name / Model</label>
+                    <input type="text" id="item-name" required placeholder="e.g. Front Brake Shoe" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">🗂️ Type (Category Sub-Division)</label>
+                    <select id="item-type" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                        <option value="TVS King">BABAJ ➡️ TVS King</option>
+                        <option value="Hora RE">BABAJ ➡️ Hora RE</option>
+                        <option value="BOXER">BOXER</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">📍 Storage Location / Bin</label>
+                    <input type="text" id="item-location" required placeholder="e.g. Rack B-4" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-2">💵 Buying Price (ETB)</label>
+                        <input type="number" step="0.01" id="item-buying" required placeholder="0.00" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-2">💰 Selling Price (ETB)</label>
+                        <input type="number" step="0.01" id="item-selling" required placeholder="0.00" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-2">📦 Quantity</label>
+                        <input type="number" id="item-quantity" required placeholder="0" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-brand-accent">
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-4">
+                    <button type="submit" class="flex-1 py-4 rounded-xl bg-gradient-to-r from-brand-purple to-brand-pink font-bold text-white shadow-lg hover:opacity-95 transition">Save Item</button>
+                    <button type="button" onclick="switchView('inventory-page')" class="px-6 py-4 rounded-xl bg-slate-800 font-semibold text-slate-300 hover:bg-slate-700 transition">Cancel</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- CRITICAL STOCK -->
+        <section id="critical-page" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border pb-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-white">⚠️ Critical Stock</h2>
+                    <p class="text-slate-400 text-sm mt-1">All items, lowest stock first — critical ones are flagged in red.</p>
+                </div>
+                <div class="flex items-center gap-2 bg-brand-card p-2 rounded-xl border border-brand-border">
+                    <span class="text-xs text-slate-400 font-semibold pl-2">Threshold:</span>
+                    <button onclick="setCriticalThreshold(3)" id="crit-thresh-3" class="tab-btn active px-3 py-1.5 rounded-lg text-xs font-bold transition">&lt; 3</button>
+                    <button onclick="setCriticalThreshold(4)" id="crit-thresh-4" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">&lt; 4</button>
+                </div>
+            </div>
+            <div id="critical-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+
+        <!-- SALES ANALYTICS -->
+        <section id="sales-page" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border pb-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-white">Sales & Profit Analytics</h2>
+                    <p class="text-slate-400 text-sm mt-1">Net profit is (Selling − Buying) × Quantity, updated dynamically upon sales & returns.</p>
+                </div>
+                <div class="flex bg-brand-card p-1.5 rounded-xl border border-brand-border">
+                    <button onclick="setSalesHorizon('today')" id="horizon-today" class="tab-btn active px-5 py-2 rounded-lg text-xs font-bold transition">Today</button>
+                    <button onclick="setSalesHorizon('daily')" id="horizon-daily" class="tab-btn px-5 py-2 rounded-lg text-xs font-bold transition">Daily History</button>
+                    <button onclick="setSalesHorizon('monthly')" id="horizon-monthly" class="tab-btn px-5 py-2 rounded-lg text-xs font-bold transition">Monthly History</button>
+                </div>
+            </div>
+
+            <div id="sales-today-summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-brand-card border border-brand-border rounded-2xl p-6">
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Today's Revenue</p>
+                    <p id="sales-total-revenue" class="text-3xl font-black text-white mt-2">0.00 ETB</p>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-950/40 to-brand-card border border-emerald-500/30 rounded-2xl p-6">
+                    <p class="text-xs font-semibold text-emerald-400 uppercase">Today's Net Profit</p>
+                    <p id="sales-total-profit" class="text-3xl font-black text-emerald-400 mt-2">0.00 ETB</p>
+                </div>
+            </div>
+
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-6 shadow-xl overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase bg-brand-dark/50 text-slate-400 border-b border-brand-border">
+                        <tr id="sales-table-head">
+                            <th class="py-3 px-4">Item</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Qty</th>
+                            <th class="py-3 px-4">Price</th>
+                            <th class="py-3 px-4 text-emerald-400">Profit</th>
+                            <th class="py-3 px-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-table-body" class="divide-y divide-brand-border"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- INFO PAGE -->
+        <section id="info-page" class="hidden max-w-3xl mx-auto space-y-6">
+            <div class="flex gap-2 bg-brand-card p-1.5 rounded-xl border border-brand-border w-fit mx-auto">
+                <button onclick="setInfoTab('about')" id="info-tab-about" class="tab-btn active px-5 py-2 rounded-lg text-xs font-bold transition">About</button>
+                <button onclick="setInfoTab('howitworks')" id="info-tab-howitworks" class="tab-btn px-5 py-2 rounded-lg text-xs font-bold transition">How It Works</button>
+                <button onclick="setInfoTab('contact')" id="info-tab-contact" class="tab-btn px-5 py-2 rounded-lg text-xs font-bold transition">Contact Us</button>
+            </div>
+
+            <div id="info-about" class="info-content hidden bg-brand-card border border-brand-border rounded-3xl p-8 space-y-4">
+                <h3 class="text-2xl font-black text-white flex items-center gap-2"><span>🏢</span> About NetsaStock</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">NetsaStock is a specialized warehouse system built for automotive spare parts management — engineered for store managers and family-operated businesses who need clean tracking, card grid layouts, and accurate revenue metrics.</p>
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-pink-400 uppercase tracking-wider">⚡ Core Application Features</h4>
+                    <ul class="text-xs text-slate-300 space-y-2 bg-brand-dark/60 p-4 rounded-xl border border-brand-border">
+                        <li class="flex items-start gap-2"><span>🎯</span> <b>Dual-Main Divisions:</b> Segmented into <i>BABAJ</i> (TVS King / Hora RE) and <i>BOXER</i>.</li>
+                        <li class="flex items-start gap-2"><span>⚠️</span> <b>Critical Stock Alerts:</b> Dedicated panel for low stock items, sorted by lowest quantity.</li>
+                        <li class="flex items-start gap-2"><span>💵</span> <b>Financial Capital Engine:</b> Instant valuation of total locked funds (Quantity × Buying Price).</li>
+                        <li class="flex items-start gap-2"><span>📈</span> <b>Profit Ledger:</b> Auto-calculates net margins per sale, with return tracking.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="info-howitworks" class="info-content hidden bg-brand-card border border-brand-border rounded-3xl p-8 space-y-4">
+                <h3 class="text-2xl font-black text-white flex items-center gap-2"><span>📖</span> Application User Manual</h3>
+                <div class="space-y-4 text-xs text-slate-300">
+                    <div class="bg-brand-dark p-4 rounded-xl border border-brand-border">
+                        <h4 class="font-bold text-purple-400 text-sm mb-1">1. Managing Inventory</h4>
+                        <p>Click 📦 Stock. Filter by TVS King, Hora RE, or Boxer. Sell, Restock, Edit, or Delete items using card controls.</p>
+                    </div>
+                    <div class="bg-brand-dark p-4 rounded-xl border border-brand-border">
+                        <h4 class="font-bold text-pink-400 text-sm mb-1">2. Adding New Spare Parts</h4>
+                        <p>Click ➕ Add Item, enter details, and Save. Form inputs reset automatically on save.</p>
+                    </div>
+                    <div class="bg-brand-dark p-4 rounded-xl border border-brand-border">
+                        <h4 class="font-bold text-emerald-400 text-sm mb-1">3. Selling & Returns</h4>
+                        <p>Click Sell on any stock card. To process a return, navigate to Analytics → Today and click Return.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="info-contact" class="info-content hidden bg-brand-card border border-brand-border rounded-3xl p-8 space-y-5">
+                <h3 class="text-2xl font-black text-white flex items-center gap-2"><span>📞</span> Contact Support</h3>
+                <p class="text-slate-300 text-sm">Have questions about stock configuration or warehouse operations?</p>
+                <div class="space-y-3 bg-brand-dark p-5 rounded-2xl border border-brand-border">
+                    <div class="flex items-center gap-3">
+                        <span class="p-2.5 bg-purple-900/40 rounded-xl text-purple-400 text-lg">✉️</span>
+                        <div><span class="text-xs text-slate-500 font-bold block">ADMIN EMAIL</span><span class="text-sm font-bold text-slate-200">user@netsastock.com</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- EDIT ITEM MODAL -->
+    <div id="edit-modal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+        <div class="bg-brand-card border border-brand-border rounded-3xl p-6 max-w-lg w-full space-y-4">
+            <h3 class="text-xl font-bold text-white">✏️ Edit Inventory Item</h3>
+            <form id="edit-item-form" onsubmit="handleSaveEdit(event)" class="space-y-4">
+                <input type="hidden" id="edit-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Name / Model</label>
+                    <input type="text" id="edit-name" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Type Category</label>
+                    <select id="edit-type" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                        <option value="TVS King">BABAJ ➡️ TVS King</option>
+                        <option value="Hora RE">BABAJ ➡️ Hora RE</option>
+                        <option value="BOXER">BOXER</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Bin Location</label>
+                    <input type="text" id="edit-location" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Buying (ETB)</label>
+                        <input type="number" step="0.01" id="edit-buying" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Selling (ETB)</label>
+                        <input type="number" step="0.01" id="edit-selling" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Quantity</label>
+                        <input type="number" id="edit-quantity" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-brand-accent hover:bg-indigo-600 font-bold text-white rounded-xl">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" class="px-5 py-3 bg-slate-800 font-semibold text-slate-300 rounded-xl">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SELL MODAL -->
+    <div id="sell-modal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+        <div class="bg-brand-card border border-brand-border rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 id="sell-modal-title" class="text-xl font-bold text-white">🛒 Sell Item</h3>
+            <p id="sell-modal-stock" class="text-xs text-slate-400"></p>
+            <form id="sell-form" onsubmit="handleConfirmSell(event)" class="space-y-4">
+                <input type="hidden" id="sell-item-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Quantity Sold</label>
+                    <input type="number" id="sell-qty" value="1" min="1" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Actual Selling Price (ETB)</label>
+                    <input type="number" step="0.01" id="sell-price" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                    <p id="sell-listed-price" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <p id="sell-error" class="text-xs text-red-400 hidden"></p>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded-xl transition">Confirm Sale</button>
+                    <button type="button" onclick="closeSellModal()" class="px-5 py-3 bg-slate-800 font-semibold text-slate-300 rounded-xl">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- RETURN MODAL -->
+    <div id="return-modal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+        <div class="bg-brand-card border border-brand-border rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 id="return-modal-title" class="text-xl font-bold text-white">↩️ Return Item</h3>
+            <p id="return-modal-info" class="text-xs text-slate-400"></p>
+            <form id="return-form" onsubmit="handleConfirmReturn(event)" class="space-y-4">
+                <input type="hidden" id="return-txn-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Quantity Returned</label>
+                    <input type="number" id="return-qty" min="1" required class="w-full bg-brand-dark border border-brand-border rounded-xl px-3 py-2 text-slate-200">
+                </div>
+                <p id="return-error" class="text-xs text-red-400 hidden"></p>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-3 bg-orange-600 hover:bg-orange-500 font-bold text-white rounded-xl transition">Confirm Return</button>
+                    <button type="button" onclick="closeReturnModal()" class="px-5 py-3 bg-slate-800 font-semibold text-slate-300 rounded-xl">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-emerald-600 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-2xl z-[60] transition-opacity"></div>
+
+    <script>
+        // VANILLA STATE STORE
+        let localInventory = [
+            { id: "1", name: "Brake Pad Set", type: "TVS King", location: "Rack A-1", buyingPrice: 450, sellingPrice: 650, quantity: 8, totalSold: 12 },
+            { id: "2", name: "Piston Ring Kit", type: "Hora RE", location: "Shelf B-2", buyingPrice: 1200, sellingPrice: 1650, quantity: 2, totalSold: 5 },
+            { id: "3", name: "Clutch Cable", type: "BOXER", location: "Bin C-4", buyingPrice: 180, sellingPrice: 280, quantity: 1, totalSold: 19 }
+        ];
+
+        function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+
+        let todayTxns = [
+            { id: "tx_101", itemId: "3", itemName: "Clutch Cable", itemType: "BOXER", quantity: 2, buyingPrice: 180, sellingPrice: 280, profit: 200, revenue: 560 }
+        ];
+
+        let dailySummaries = [
+            { date: getTodayKey(), revenue: 560, profit: 200 }
+        ];
+
+        let monthlySummaries = [
+            { month: getTodayKey().substring(0, 7), revenue: 560, profit: 200 }
+        ];
+
+        let activeCategory = 'ALL';
+        let salesHorizon = 'today';
+        let criticalThreshold = 3;
+        let trendingExpanded = false;
+        const TRENDING_INITIAL_COUNT = 5;
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('hidden');
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 1800);
+            setTimeout(() => toast.classList.add('hidden'), 2100);
+        }
+
+        function refreshAppViews() {
+            renderInventory();
+            renderCritical();
+            renderDashboardCapital();
+            renderTopSold();
+            renderSalesAnalytics();
+        }
+
+        // VIEW ROUTING
+        window.switchView = function(viewId) {
+            ['welcome-page', 'inventory-page', 'add-item-page', 'critical-page', 'sales-page', 'info-page'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.setInfoTab = function(tab) {
+            ['about', 'howitworks', 'contact'].forEach(t => {
+                document.getElementById('info-' + t).classList.add('hidden');
+                document.getElementById('info-tab-' + t).classList.remove('active');
+            });
+            document.getElementById('info-' + tab).classList.remove('hidden');
+            document.getElementById('info-tab-' + tab).classList.add('active');
+        };
+
+        // CAPITAL CALCULATIONS
+        function renderDashboardCapital() {
+            let tvs = 0, hora = 0, boxer = 0;
+            localInventory.forEach(item => {
+                const totalCost = (Number(item.quantity) || 0) * (Number(item.buyingPrice) || 0);
+                if (item.type === 'TVS King') tvs += totalCost;
+                else if (item.type === 'Hora RE') hora += totalCost;
+                else if (item.type === 'BOXER') boxer += totalCost;
+            });
+            document.getElementById('cap-tvs').innerText = tvs.toFixed(2) + ' ETB';
+            document.getElementById('cap-hora').innerText = hora.toFixed(2) + ' ETB';
+            document.getElementById('cap-boxer').innerText = boxer.toFixed(2) + ' ETB';
+            document.getElementById('cap-total').innerText = (tvs + hora + boxer).toFixed(2) + ' ETB';
+        }
+
+        // TRENDING ITEMS
+        function renderTopSold() {
+            const listEl = document.getElementById('top-sold-list');
+            const toggleBtn = document.getElementById('trending-toggle-btn');
+            
+            const sorted = [...localInventory].sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0));
+            const hasSales = sorted.some(i => (i.totalSold || 0) > 0);
+
+            if (!hasSales || sorted.length === 0) {
+                listEl.innerHTML = '<p class="text-xs text-slate-400 italic py-4 text-center">No sales recorded yet.</p>';
+                toggleBtn.classList.add('hidden');
+                return;
+            }
+
+            const totalItems = sorted.length;
+            const itemsToDisplay = trendingExpanded ? sorted : sorted.slice(0, TRENDING_INITIAL_COUNT);
+
+            let html = '';
+            itemsToDisplay.forEach((item, index) => {
+                const rankClass = index === 0 ? 'text-amber-400 font-extrabold' : index === 1 ? 'text-slate-300 font-bold' : index === 2 ? 'text-amber-600 font-bold' : 'text-slate-500';
+                html += `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-brand-dark/50 border border-brand-border/40 hover:border-brand-accent/50 transition">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <span class="text-xs ${rankClass} w-5 text-center flex-shrink-0">#${index + 1}</span>
+                            <div class="truncate">
+                                <p class="text-xs font-bold text-white truncate">${item.name}</p>
+                                <span class="text-[10px] text-slate-400">${item.type} • Bin: ${item.location}</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 pl-2">
+                            <span class="text-xs font-black text-pink-400 block">${item.totalSold || 0} sold</span>
+                            <span class="text-[10px] text-slate-400">${Number(item.sellingPrice).toFixed(2)} ETB</span>
+                        </div>
+                    </div>
+                `;
+            });
+            listEl.innerHTML = html;
+
+            if (totalItems > TRENDING_INITIAL_COUNT) {
+                toggleBtn.classList.remove('hidden');
+                toggleBtn.innerText = trendingExpanded ? 'Show Top 5 Only' : `Show All Trending (${totalItems})`;
+            } else {
+                toggleBtn.classList.add('hidden');
+            }
+        }
+
+        window.toggleTrendingExpanded = function() {
+            trendingExpanded = !trendingExpanded;
+            renderTopSold();
+        };
+
+        // INVENTORY CARD GRID (MATCHING CRITICAL LOOK)
+        window.filterCategory = function(cat) {
+            activeCategory = cat;
+            ['ALL', 'BABAJ', 'TVS King', 'Hora RE', 'BOXER'].forEach(c => {
+                const btn = document.getElementById('tab-' + c);
+                if (btn) btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('tab-' + cat);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderInventory();
+        };
+
+        function renderInventory() {
+            const container = document.getElementById('inventory-container');
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+
+            let filtered = localInventory.filter(i => {
+                const matchesCat = activeCategory === 'ALL' ? true :
+                                   activeCategory === 'BABAJ' ? (i.type === 'TVS King' || i.type === 'Hora RE') :
+                                   i.type === activeCategory;
+                const matchesSearch = !search || 
+                                     i.name.toLowerCase().includes(search) || 
+                                     i.type.toLowerCase().includes(search) || 
+                                     i.location.toLowerCase().includes(search);
+                return matchesCat && matchesSearch;
+            });
+
+            // Alphabetical Sort (A-Z)
+            filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 font-semibold">No spare parts found.</div>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(i => {
+                const qty = Number(i.quantity) || 0;
+                const isLow = qty <= 2;
+                const badgeColor = isLow ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+                html += `
+                    <div class="bg-brand-card border border-brand-border hover:border-brand-accent/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-4 transition">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h3 class="font-bold text-white text-lg leading-snug">${i.name}</h3>
+                                <span class="px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wider ${badgeColor}">
+                                    ${qty} in stock
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-400 space-y-1">
+                                <p><span class="text-slate-500 font-semibold">Category:</span> ${i.type}</p>
+                                <p><span class="text-slate-500 font-semibold">Location:</span> ${i.location}</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-brand-border/60 grid grid-cols-2 gap-2 text-xs">
+                            <div class="bg-brand-dark/40 p-2.5 rounded-xl border border-white/5">
+                                <span class="text-[10px] text-slate-500 uppercase block font-semibold">Buying Price</span>
+                                <span class="text-slate-300 font-bold">${Number(i.buyingPrice).toFixed(2)} ETB</span>
+                            </div>
+                            <div class="bg-brand-dark/40 p-2.5 rounded-xl border border-white/5">
+                                <span class="text-[10px] text-slate-500 uppercase block font-semibold">Selling Price</span>
+                                <span class="text-emerald-400 font-bold">${Number(i.sellingPrice).toFixed(2)} ETB</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button onclick="openSellModal('${i.id}')" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-md">🛒 Sell</button>
+                            <button onclick="quickRestock('${i.id}')" class="py-2.5 bg-brand-dark border border-brand-border hover:border-brand-accent text-slate-200 font-semibold rounded-xl text-xs transition">➕ Restock</button>
+                            <button onclick="openEditModal('${i.id}')" class="py-2.5 bg-brand-dark border border-brand-border hover:border-brand-accent text-slate-300 font-semibold rounded-xl text-xs transition">✏️ Edit</button>
+                            <button onclick="handleDeleteItem('${i.id}')" class="py-2.5 bg-brand-dark border border-brand-border hover:border-brand-danger text-red-400 font-semibold rounded-xl text-xs transition">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // CRITICAL STOCK PAGE
+        window.setCriticalThreshold = function(val) {
+            criticalThreshold = val;
+            [3, 4].forEach(t => {
+                const btn = document.getElementById('crit-thresh-' + t);
+                if (btn) btn.classList.remove('active');
+            });
+            document.getElementById('crit-thresh-' + val).classList.add('active');
+            renderCritical();
+        };
+
+        function renderCritical() {
+            const container = document.getElementById('critical-container');
+            let sorted = [...localInventory].sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0));
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 font-semibold">No critical stock items.</div>';
+                return;
+            }
+
+            let html = '';
+            sorted.forEach(i => {
+                const qty = Number(i.quantity) || 0;
+                const isCrit = qty < criticalThreshold;
+                const borderStyle = isCrit ? 'border-brand-danger/60 bg-red-950/10' : 'border-brand-border bg-brand-card';
+
+                html += `
+                    <div class="${borderStyle} border rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-4 transition">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h3 class="font-bold text-white text-lg leading-snug">${i.name}</h3>
+                                ${isCrit ? '<span class="px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-extrabold uppercase">Critical</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-400">${i.type} • Bin: ${i.location}</p>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-brand-dark/50">
+                            <span class="text-xs text-slate-400 font-semibold">Current Quantity</span>
+                            <span class="text-xl font-black ${isCrit ? 'text-red-400' : 'text-slate-200'}">${qty} units</span>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="quickRestock('${i.id}')" class="flex-1 py-2.5 bg-brand-accent hover:bg-indigo-600 font-bold text-white rounded-xl text-xs transition">➕ Quick Restock (+1)</button>
+                            <button onclick="openSellModal('${i.id}')" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded-xl text-xs transition">Sell</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ADD ITEM HANDLER
+        window.handleAddItem = function(e) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now().toString(),
+                name: document.getElementById('item-name').value.trim(),
+                type: document.getElementById('item-type').value,
+                location: document.getElementById('item-location').value.trim(),
+                buyingPrice: parseFloat(document.getElementById('item-buying').value) || 0,
+                sellingPrice: parseFloat(document.getElementById('item-selling').value) || 0,
+                quantity: parseInt(document.getElementById('item-quantity').value) || 0,
+                totalSold: 0
+            };
+
+            localInventory.push(newItem);
+            document.getElementById('add-item-form').reset();
+            showToast("Item saved to inventory!");
+            refreshAppViews();
+            switchView('inventory-page');
+        };
+
+        // QUICK RESTOCK
+        window.quickRestock = function(id) {
+            const item = localInventory.find(i => i.id === id);
+            if (item) {
+                item.quantity += 1;
+                showToast("Stock updated (+1)");
+                refreshAppViews();
+            }
+        };
+
+        // EDIT ITEM MODAL HANDLERS
+        window.openEditModal = function(id) {
+            const item = localInventory.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-name').value = item.name;
+            document.getElementById('edit-type').value = item.type;
+            document.getElementById('edit-location').value = item.location;
+            document.getElementById('edit-buying').value = item.buyingPrice;
+            document.getElementById('edit-selling').value = item.sellingPrice;
+            document.getElementById('edit-quantity').value = item.quantity;
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('edit-modal').classList.add('flex');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('edit-modal').classList.add('hidden');
+            document.getElementById('edit-modal').classList.remove('flex');
+        };
+
+        window.handleSaveEdit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const item = localInventory.find(i => i.id === id);
+            if (item) {
+                item.name = document.getElementById('edit-name').value.trim();
+                item.type = document.getElementById('edit-type').value;
+                item.location = document.getElementById('edit-location').value.trim();
+                item.buyingPrice = parseFloat(document.getElementById('edit-buying').value) || 0;
+                item.sellingPrice = parseFloat(document.getElementById('edit-selling').value) || 0;
+                item.quantity = parseInt(document.getElementById('edit-quantity').value) || 0;
+
+                closeEditModal();
+                showToast("Item details updated!");
+                refreshAppViews();
+            }
+        };
+
+        window.handleDeleteItem = function(id) {
+            if (confirm("Are you sure you want to delete this spare part?")) {
+                localInventory = localInventory.filter(i => i.id !== id);
+                showToast("Item deleted.");
+                refreshAppViews();
+            }
+        };
+
+        // SELL MODAL HANDLERS
+        window.openSellModal = function(id) {
+            const item = localInventory.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('sell-item-id').value = item.id;
+            document.getElementById('sell-modal-title').innerText = `🛒 Sell ${item.name}`;
+            document.getElementById('sell-modal-stock').innerText = `Current available stock: ${item.quantity}`;
+            document.getElementById('sell-price').value = item.sellingPrice;
+            document.getElementById('sell-listed-price').innerText = `Standard selling price: ${Number(item.sellingPrice).toFixed(2)} ETB`;
+            document.getElementById('sell-qty').value = 1;
+            document.getElementById('sell-error').classList.add('hidden');
+            document.getElementById('sell-modal').classList.remove('hidden');
+            document.getElementById('sell-modal').classList.add('flex');
+        };
+
+        window.closeSellModal = function() {
+            document.getElementById('sell-modal').classList.add('hidden');
+            document.getElementById('sell-modal').classList.remove('flex');
+        };
+
+        window.handleConfirmSell = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('sell-item-id').value;
+            const item = localInventory.find(i => i.id === id);
+            const qtySold = parseInt(document.getElementById('sell-qty').value) || 0;
+            const actualPrice = parseFloat(document.getElementById('sell-price').value) || 0;
+            const errEl = document.getElementById('sell-error');
+
+            if (!item || qtySold <= 0) return;
+            if (qtySold > item.quantity) {
+                errEl.innerText = `Cannot sell more than available stock (${item.quantity}).`;
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const profitPerUnit = actualPrice - Number(item.buyingPrice || 0);
+            const totalProfit = profitPerUnit * qtySold;
+            const totalRevenue = actualPrice * qtySold;
+
+            // Update Stock
+            item.quantity -= qtySold;
+            item.totalSold = (item.totalSold || 0) + qtySold;
+
+            // Log Transaction
+            todayTxns.unshift({
+                id: 'tx_' + Date.now(),
+                itemId: id,
+                itemName: item.name,
+                itemType: item.type,
+                quantity: qtySold,
+                buyingPrice: item.buyingPrice,
+                sellingPrice: actualPrice,
+                profit: totalProfit,
+                revenue: totalRevenue
+            });
+
+            // Update Ledger Summaries
+            const today = getTodayKey();
+            let dSum = dailySummaries.find(d => d.date === today);
+            if (dSum) {
+                dSum.revenue += totalRevenue;
+                dSum.profit += totalProfit;
+            } else {
+                dailySummaries.unshift({ date: today, revenue: totalRevenue, profit: totalProfit });
+            }
+
+            const monthKey = today.substring(0, 7);
+            let mSum = monthlySummaries.find(m => m.month === monthKey);
+            if (mSum) {
+                mSum.revenue += totalRevenue;
+                mSum.profit += totalProfit;
+            } else {
+                monthlySummaries.unshift({ month: monthKey, revenue: totalRevenue, profit: totalProfit });
+            }
+
+            document.getElementById('sell-form').reset();
+            closeSellModal();
+            showToast("Sale logged successfully!");
+            refreshAppViews();
+        };
+
+        // RETURN MODAL HANDLERS
+        window.openReturnModal = function(txnId) {
+            const txn = todayTxns.find(t => t.id === txnId);
+            if (!txn) return;
+            document.getElementById('return-txn-id').value = txn.id;
+            document.getElementById('return-modal-title').innerText = `↩️ Return ${txn.itemName}`;
+            document.getElementById('return-modal-info').innerText = `Original Quantity Sold: ${txn.quantity}`;
+            document.getElementById('return-qty').value = 1;
+            document.getElementById('return-qty').max = txn.quantity;
+            document.getElementById('return-error').classList.add('hidden');
+            document.getElementById('return-modal').classList.remove('hidden');
+            document.getElementById('return-modal').classList.add('flex');
+        };
+
+        window.closeReturnModal = function() {
+            document.getElementById('return-modal').classList.add('hidden');
+            document.getElementById('return-modal').classList.remove('flex');
+        };
+
+        window.handleConfirmReturn = function(e) {
+            e.preventDefault();
+            const txnId = document.getElementById('return-txn-id').value;
+            const txnIdx = todayTxns.findIndex(t => t.id === txnId);
+            if (txnIdx === -1) return;
+            
+            const txn = todayTxns[txnIdx];
+            const returnQty = parseInt(document.getElementById('return-qty').value) || 0;
+            const errEl = document.getElementById('return-error');
+
+            if (returnQty <= 0) return;
+            if (returnQty > txn.quantity) {
+                errEl.innerText = `Return quantity cannot exceed sold quantity (${txn.quantity}).`;
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const unitProfit = txn.profit / txn.quantity;
+            const unitRevenue = txn.revenue / txn.quantity;
+            const returnedProfit = unitProfit * returnQty;
+            const returnedRevenue = unitRevenue * returnQty;
+
+            // Restore Stock
+            if (txn.itemId) {
+                const item = localInventory.find(i => i.id === txn.itemId);
+                if (item) {
+                    item.quantity += returnQty;
+                    item.totalSold = Math.max(0, (item.totalSold || 0) - returnQty);
+                }
+            }
+
+            // Deduct from Daily and Monthly Totals
+            const today = getTodayKey();
+            let dSum = dailySummaries.find(d => d.date === today);
+            if (dSum) {
+                dSum.revenue -= returnedRevenue;
+                dSum.profit -= returnedProfit;
+            }
+
+            const monthKey = today.substring(0, 7);
+            let mSum = monthlySummaries.find(m => m.month === monthKey);
+            if (mSum) {
+                mSum.revenue -= returnedRevenue;
+                mSum.profit -= returnedProfit;
+            }
+
+            // Adjust or remove transaction
+            if (returnQty === txn.quantity) {
+                todayTxns.splice(txnIdx, 1);
+            } else {
+                txn.quantity -= returnQty;
+                txn.revenue -= returnedRevenue;
+                txn.profit -= returnedProfit;
+            }
+
+            closeReturnModal();
+            showToast("Return processed successfully!");
+            refreshAppViews();
+        };
+
+        // SALES ANALYTICS HORIZONS
+        window.setSalesHorizon = function(horizon) {
+            salesHorizon = horizon;
+            ['today', 'daily', 'monthly'].forEach(h => {
+                const btn = document.getElementById('horizon-' + h);
+                if (btn) btn.classList.remove('active');
+            });
+            document.getElementById('horizon-' + horizon).classList.add('active');
+            renderSalesAnalytics();
+        };
+
+        function renderSalesAnalytics() {
+            const headEl = document.getElementById('sales-table-head');
+            const bodyEl = document.getElementById('sales-table-body');
+            const revEl = document.getElementById('sales-total-revenue');
+            const profEl = document.getElementById('sales-total-profit');
+
+            if (salesHorizon === 'today') {
+                headEl.innerHTML = `
+                    <th class="py-3 px-4">Item</th>
+                    <th class="py-3 px-4">Type</th>
+                    <th class="py-3 px-4">Qty</th>
+                    <th class="py-3 px-4">Price</th>
+                    <th class="py-3 px-4 text-emerald-400">Profit</th>
+                    <th class="py-3 px-4">Action</th>
+                `;
+
+                let totRev = 0, totProf = 0;
+                let rowsHtml = '';
+
+                todayTxns.forEach(t => {
+                    totRev += Number(t.revenue) || 0;
+                    totProf += Number(t.profit) || 0;
+                    rowsHtml += `
+                        <tr class="hover:bg-brand-dark/30 transition">
+                            <td class="py-3 px-4 font-bold text-white">${t.itemName}</td>
+                            <td class="py-3 px-4 text-xs text-slate-400">${t.itemType}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-200">${t.quantity}</td>
+                            <td class="py-3 px-4 text-slate-300">${Number(t.sellingPrice).toFixed(2)} ETB</td>
+                            <td class="py-3 px-4 font-bold text-emerald-400">${Number(t.profit).toFixed(2)} ETB</td>
+                            <td class="py-3 px-4">
+                                <button onclick="openReturnModal('${t.id}')" class="px-3 py-1 bg-orange-950/60 border border-orange-500/40 hover:bg-orange-900 text-orange-300 font-bold rounded-lg text-xs transition">↩️ Return</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                revEl.innerText = totRev.toFixed(2) + ' ETB';
+                profEl.innerText = totProf.toFixed(2) + ' ETB';
+                bodyEl.innerHTML = rowsHtml || '<tr><td colspan="6" class="py-8 text-center text-slate-500 italic">No sales recorded today.</td></tr>';
+
+            } else if (salesHorizon === 'daily') {
+                headEl.innerHTML = `
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Total Revenue</th>
+                    <th class="py-3 px-4 text-emerald-400">Net Profit</th>
+                `;
+
+                let rowsHtml = '';
+                dailySummaries.forEach(d => {
+                    rowsHtml += `
+                        <tr class="hover:bg-brand-dark/30 transition">
+                            <td class="py-3 px-4 font-bold text-white">${d.date}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-300">${Number(d.revenue || 0).toFixed(2)} ETB</td>
+                            <td class="py-3 px-4 font-bold text-emerald-400">${Number(d.profit || 0).toFixed(2)} ETB</td>
+                        </tr>
+                    `;
+                });
+
+                revEl.innerText = '—';
+                profEl.innerText = '—';
+                bodyEl.innerHTML = rowsHtml || '<tr><td colspan="3" class="py-8 text-center text-slate-500 italic">No daily history recorded.</td></tr>';
+
+            } else if (salesHorizon === 'monthly') {
+                headEl.innerHTML = `
+                    <th class="py-3 px-4">Month</th>
+                    <th class="py-3 px-4">Total Revenue</th>
+                    <th class="py-3 px-4 text-emerald-400">Net Profit</th>
+                `;
+
+                let rowsHtml = '';
+                monthlySummaries.forEach(m => {
+                    rowsHtml += `
+                        <tr class="hover:bg-brand-dark/30 transition">
+                            <td class="py-3 px-4 font-bold text-white">${m.month}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-300">${Number(m.revenue || 0).toFixed(2)} ETB</td>
+                            <td class="py-3 px-4 font-bold text-emerald-400">${Number(m.profit || 0).toFixed(2)} ETB</td>
+                        </tr>
+                    `;
+                });
+
+                revEl.innerText = '—';
+                profEl.innerText = '—';
+                bodyEl.innerHTML = rowsHtml || '<tr><td colspan="3" class="py-8 text-center text-slate-500 italic">No monthly history recorded.</td></tr>';
+            }
+        }
+
+        // INITIAL LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshAppViews();
+        });
+    </script>
+</body>
+</html>
